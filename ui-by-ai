@@ -103,15 +103,23 @@ function Engine:Window(config)
 	makeDraggable(container)
 	
 	-- Window methods
+	window.tabs = {}
+	
 	function window:AddTab(name)
 		local tab = {}
 		tab.Name = name
+		
+		-- Count existing tabs
+		local tabCount = 0
+		for _ in pairs(window.tabs) do
+			tabCount = tabCount + 1
+		end
 		
 		-- Tab button in dashboard
 		local tabBtn = Instance.new("TextButton")
 		tabBtn.Name = name .. "Button"
 		tabBtn.Size = UDim2.new(1, -16, 0, 40)
-		tabBtn.Position = UDim2.new(0, 8, 0, 8 + (#dashboard:GetChildren() - 2) * 48)
+		tabBtn.Position = UDim2.new(0, 8, 0, 8 + tabCount * 48)
 		tabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
 		tabBtn.BorderSizePixel = 0
 		tabBtn.Text = name
@@ -156,6 +164,14 @@ function Engine:Window(config)
 			tabContent.Visible = true
 			tabBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 		end)
+		
+		-- Show first tab by default
+		if tabCount == 0 then
+			tabContent.Visible = true
+			tabBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+		end
+		
+		window.tabs[name] = tab
 		
 		-- Tab methods
 		function tab:AddButton(text, callback)
