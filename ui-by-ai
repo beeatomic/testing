@@ -1,11 +1,14 @@
--- Engine.lua (upload this to GitHub)
+-- Engine.lua (upload to GitHub)
 local Engine = {}
 
 function Engine:Window()
+    local Player = game.Players.LocalPlayer
+    local PlayerGui = Player:WaitForChild("PlayerGui")
+
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "CustomWindow"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.Parent = PlayerGui
 
     local Frame = Instance.new("Frame")
     Frame.Size = UDim2.new(0, 400, 0, 250)
@@ -17,38 +20,38 @@ function Engine:Window()
 
     local borderThickness = 4
 
-    -- Top-left gradient border
-    local tlBorder = Instance.new("Frame")
-    tlBorder.Size = UDim2.new(0, borderThickness, 0, borderThickness)
-    tlBorder.Position = UDim2.new(0, 0, 0, 0)
-    tlBorder.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    tlBorder.BorderSizePixel = 0
-    tlBorder.Parent = Frame
+    -- Function to create gradient borders
+    local function createBorder(size, position, rotation)
+        local border = Instance.new("Frame")
+        border.Size = size
+        border.Position = position
+        border.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        border.BorderSizePixel = 0
+        border.Parent = Frame
 
-    local tlGradient = Instance.new("UIGradient")
-    tlGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30,30,30))
-    }
-    tlGradient.Rotation = 45
-    tlGradient.Parent = tlBorder
+        local gradient = Instance.new("UIGradient")
+        gradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(30,30,30))
+        }
+        gradient.Rotation = rotation
+        gradient.Parent = border
 
-    -- Bottom-right gradient border
-    local brBorder = Instance.new("Frame")
-    brBorder.Size = UDim2.new(0, borderThickness, 0, borderThickness)
-    brBorder.Position = UDim2.new(1, -borderThickness, 1, -borderThickness)
-    brBorder.AnchorPoint = Vector2.new(0, 0)
-    brBorder.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    brBorder.BorderSizePixel = 0
-    brBorder.Parent = Frame
+        return border
+    end
 
-    local brGradient = Instance.new("UIGradient")
-    brGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30,30,30))
-    }
-    brGradient.Rotation = 225
-    brGradient.Parent = brBorder
+    -- Top border
+    createBorder(UDim2.new(1, 0, 0, borderThickness), UDim2.new(0, 0, 0, 0), 0)
+    -- Bottom border
+    createBorder(UDim2.new(1, 0, 0, borderThickness), UDim2.new(0, 0, 1, -borderThickness), 180)
+    -- Left border
+    createBorder(UDim2.new(0, borderThickness, 1, 0), UDim2.new(0, 0, 0, 0), 270)
+    -- Right border
+    createBorder(UDim2.new(0, borderThickness, 1, 0), UDim2.new(1, -borderThickness, 0, 0), 90)
+
+    -- Draggable
+    Frame.Active = true
+    Frame.Draggable = true
 
     return Frame
 end
