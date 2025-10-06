@@ -328,4 +328,5 @@ function Engine:Window(config)
 	return window
 end
 
-return Engine
+-- Return a new Engine instance ready to use
+return Engine.new()
