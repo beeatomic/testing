@@ -5,6 +5,7 @@ function Engine:Window()
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "CustomWindow"
     ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
     local Frame = Instance.new("Frame")
     Frame.Size = UDim2.new(0, 400, 0, 250)
@@ -14,13 +15,15 @@ function Engine:Window()
     Frame.BorderSizePixel = 0
     Frame.Parent = ScreenGui
 
-    -- Top-left gradient
-    local tlCorner = Instance.new("Frame")
-    tlCorner.Size = UDim2.new(0.2, 0, 0.2, 0)
-    tlCorner.Position = UDim2.new(0, 0, 0, 0)
-    tlCorner.BackgroundColor3 = Color3.new(1,1,1)
-    tlCorner.BorderSizePixel = 0
-    tlCorner.Parent = Frame
+    local borderThickness = 4
+
+    -- Top-left gradient border
+    local tlBorder = Instance.new("Frame")
+    tlBorder.Size = UDim2.new(0, borderThickness, 0, borderThickness)
+    tlBorder.Position = UDim2.new(0, 0, 0, 0)
+    tlBorder.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    tlBorder.BorderSizePixel = 0
+    tlBorder.Parent = Frame
 
     local tlGradient = Instance.new("UIGradient")
     tlGradient.Color = ColorSequence.new{
@@ -28,15 +31,16 @@ function Engine:Window()
         ColorSequenceKeypoint.new(1, Color3.fromRGB(30,30,30))
     }
     tlGradient.Rotation = 45
-    tlGradient.Parent = tlCorner
+    tlGradient.Parent = tlBorder
 
-    -- Bottom-right gradient
-    local brCorner = Instance.new("Frame")
-    brCorner.Size = UDim2.new(0.2, 0, 0.2, 0)
-    brCorner.Position = UDim2.new(0.8, 0, 0.8, 0)
-    brCorner.BackgroundColor3 = Color3.new(1,1,1)
-    brCorner.BorderSizePixel = 0
-    brCorner.Parent = Frame
+    -- Bottom-right gradient border
+    local brBorder = Instance.new("Frame")
+    brBorder.Size = UDim2.new(0, borderThickness, 0, borderThickness)
+    brBorder.Position = UDim2.new(1, -borderThickness, 1, -borderThickness)
+    brBorder.AnchorPoint = Vector2.new(0, 0)
+    brBorder.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    brBorder.BorderSizePixel = 0
+    brBorder.Parent = Frame
 
     local brGradient = Instance.new("UIGradient")
     brGradient.Color = ColorSequence.new{
@@ -44,9 +48,7 @@ function Engine:Window()
         ColorSequenceKeypoint.new(1, Color3.fromRGB(30,30,30))
     }
     brGradient.Rotation = 225
-    brGradient.Parent = brCorner
-
-    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    brGradient.Parent = brBorder
 
     return Frame
 end
