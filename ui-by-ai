@@ -1,59 +1,331 @@
--- Engine.lua (upload to GitHub)
 local Engine = {}
+Engine.__index = Engine
 
-function Engine:Window()
-    local Player = game.Players.LocalPlayer
-    local PlayerGui = Player:WaitForChild("PlayerGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "CustomWindow"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = PlayerGui
+-- Create ScreenGui
+local function createScreenGui()
+	local sg = Instance.new("ScreenGui")
+	sg.Name = "EngineUI"
+	sg.ResetOnSpawn = false
+	sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	sg.Parent = game:GetService("CoreGui")
+	return sg
+end
 
-    local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0, 400, 0, 250)
-    Frame.Position = UDim2.new(0.5, -200, 0.5, -125)
-    Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- Dark background
-    Frame.BorderSizePixel = 0
-    Frame.Parent = ScreenGui
+-- Dragging functionality
+local function makeDraggable(frame)
+	local dragging, dragInput, dragStart, startPos
+	
+	local function update(input)
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+	
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+			
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+	
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+	
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			update(input)
+		end
+	end)
+end
 
-    local borderThickness = 4
+-- Create new Engine instance
+function Engine.new()
+	local self = setmetatable({}, Engine)
+	self.ScreenGui = createScreenGui()
+	return self
+end
 
-    -- Function to create gradient borders
-    local function createBorder(size, position, rotation)
-        local border = Instance.new("Frame")
-        border.Size = size
-        border.Position = position
-        border.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        border.BorderSizePixel = 0
-        border.Parent = Frame
-
-        local gradient = Instance.new("UIGradient")
-        gradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(30,30,30))
-        }
-        gradient.Rotation = rotation
-        gradient.Parent = border
-
-        return border
-    end
-
-    -- Top border
-    createBorder(UDim2.new(1, 0, 0, borderThickness), UDim2.new(0, 0, 0, 0), 0)
-    -- Bottom border
-    createBorder(UDim2.new(1, 0, 0, borderThickness), UDim2.new(0, 0, 1, -borderThickness), 180)
-    -- Left border
-    createBorder(UDim2.new(0, borderThickness, 1, 0), UDim2.new(0, 0, 0, 0), 270)
-    -- Right border
-    createBorder(UDim2.new(0, borderThickness, 1, 0), UDim2.new(1, -borderThickness, 0, 0), 90)
-
-    -- Draggable
-    Frame.Active = true
-    Frame.Draggable = true
-
-    return Frame
+-- Create Window
+function Engine:Window(config)
+	config = config or {}
+	
+	local window = {}
+	
+	-- Container frame
+	local container = Instance.new("Frame")
+	container.Name = "WindowContainer"
+	container.Size = UDim2.new(0, 526, 0, 300) -- 420 + 98 + 8 gap
+	container.Position = UDim2.new(0.5, -263, 0.5, -150)
+	container.AnchorPoint = Vector2.new(0.5, 0.5)
+	container.BackgroundTransparency = 1
+	container.Parent = self.ScreenGui
+	
+	-- Dashboard (left panel)
+	local dashboard = Instance.new("Frame")
+	dashboard.Name = "Dashboard"
+	dashboard.Size = UDim2.new(0, 98, 0, 300)
+	dashboard.Position = UDim2.new(0, 0, 0, 0)
+	dashboard.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	dashboard.BorderSizePixel = 0
+	dashboard.Parent = container
+	
+	local dashboardCorner = Instance.new("UICorner")
+	dashboardCorner.CornerRadius = UDim.new(0, 15)
+	dashboardCorner.Parent = dashboard
+	
+	-- Main window (right panel)
+	local mainWindow = Instance.new("Frame")
+	mainWindow.Name = "MainWindow"
+	mainWindow.Size = UDim2.new(0, 420, 0, 300)
+	mainWindow.Position = UDim2.new(0, 106, 0, 0) -- 98 + 8 gap
+	mainWindow.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	mainWindow.BorderSizePixel = 0
+	mainWindow.Parent = container
+	
+	local mainCorner = Instance.new("UICorner")
+	mainCorner.CornerRadius = UDim.new(0, 15)
+	mainCorner.Parent = mainWindow
+	
+	-- Make container draggable
+	makeDraggable(container)
+	
+	-- Window methods
+	function window:AddTab(name)
+		local tab = {}
+		tab.Name = name
+		
+		-- Tab button in dashboard
+		local tabBtn = Instance.new("TextButton")
+		tabBtn.Name = name .. "Button"
+		tabBtn.Size = UDim2.new(1, -16, 0, 40)
+		tabBtn.Position = UDim2.new(0, 8, 0, 8 + (#dashboard:GetChildren() - 2) * 48)
+		tabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+		tabBtn.BorderSizePixel = 0
+		tabBtn.Text = name
+		tabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+		tabBtn.Font = Enum.Font.GothamSemibold
+		tabBtn.TextSize = 14
+		tabBtn.Parent = dashboard
+		
+		local btnCorner = Instance.new("UICorner")
+		btnCorner.CornerRadius = UDim.new(0, 8)
+		btnCorner.Parent = tabBtn
+		
+		-- Tab content frame
+		local tabContent = Instance.new("Frame")
+		tabContent.Name = name .. "Content"
+		tabContent.Size = UDim2.new(1, -20, 1, -20)
+		tabContent.Position = UDim2.new(0, 10, 0, 10)
+		tabContent.BackgroundTransparency = 1
+		tabContent.Visible = false
+		tabContent.Parent = mainWindow
+		
+		local listLayout = Instance.new("UIListLayout")
+		listLayout.Padding = UDim.new(0, 8)
+		listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		listLayout.Parent = tabContent
+		
+		-- Tab button click
+		tabBtn.MouseButton1Click:Connect(function()
+			-- Hide all tabs
+			for _, child in pairs(mainWindow:GetChildren()) do
+				if child:IsA("Frame") and child.Name:match("Content$") then
+					child.Visible = false
+				end
+			end
+			-- Reset all button colors
+			for _, child in pairs(dashboard:GetChildren()) do
+				if child:IsA("TextButton") then
+					child.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+				end
+			end
+			-- Show this tab
+			tabContent.Visible = true
+			tabBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+		end)
+		
+		-- Tab methods
+		function tab:AddButton(text, callback)
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(1, 0, 0, 35)
+			btn.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+			btn.BorderSizePixel = 0
+			btn.Text = text
+			btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+			btn.Font = Enum.Font.Gotham
+			btn.TextSize = 13
+			btn.Parent = tabContent
+			
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 8)
+			corner.Parent = btn
+			
+			btn.MouseButton1Click:Connect(function()
+				if callback then callback() end
+			end)
+			
+			return btn
+		end
+		
+		function tab:AddToggle(text, default, callback)
+			local toggle = Instance.new("Frame")
+			toggle.Size = UDim2.new(1, 0, 0, 35)
+			toggle.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+			toggle.BorderSizePixel = 0
+			toggle.Parent = tabContent
+			
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 8)
+			corner.Parent = toggle
+			
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.new(1, -50, 1, 0)
+			label.Position = UDim2.new(0, 10, 0, 0)
+			label.BackgroundTransparency = 1
+			label.Text = text
+			label.TextColor3 = Color3.fromRGB(220, 220, 220)
+			label.Font = Enum.Font.Gotham
+			label.TextSize = 13
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.Parent = toggle
+			
+			local state = default or false
+			
+			local toggleBtn = Instance.new("TextButton")
+			toggleBtn.Size = UDim2.new(0, 40, 0, 20)
+			toggleBtn.Position = UDim2.new(1, -45, 0.5, -10)
+			toggleBtn.BackgroundColor3 = state and Color3.fromRGB(60, 180, 75) or Color3.fromRGB(70, 70, 80)
+			toggleBtn.BorderSizePixel = 0
+			toggleBtn.Text = ""
+			toggleBtn.Parent = toggle
+			
+			local toggleCorner = Instance.new("UICorner")
+			toggleCorner.CornerRadius = UDim.new(1, 0)
+			toggleCorner.Parent = toggleBtn
+			
+			local indicator = Instance.new("Frame")
+			indicator.Size = UDim2.new(0, 14, 0, 14)
+			indicator.Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
+			indicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			indicator.BorderSizePixel = 0
+			indicator.Parent = toggleBtn
+			
+			local indCorner = Instance.new("UICorner")
+			indCorner.CornerRadius = UDim.new(1, 0)
+			indCorner.Parent = indicator
+			
+			toggleBtn.MouseButton1Click:Connect(function()
+				state = not state
+				TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = state and Color3.fromRGB(60, 180, 75) or Color3.fromRGB(70, 70, 80)}):Play()
+				TweenService:Create(indicator, TweenInfo.new(0.2), {Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)}):Play()
+				if callback then callback(state) end
+			end)
+			
+			return toggle
+		end
+		
+		function tab:AddSlider(text, min, max, default, callback)
+			local slider = Instance.new("Frame")
+			slider.Size = UDim2.new(1, 0, 0, 50)
+			slider.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+			slider.BorderSizePixel = 0
+			slider.Parent = tabContent
+			
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius = UDim.new(0, 8)
+			corner.Parent = slider
+			
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.new(1, -20, 0, 20)
+			label.Position = UDim2.new(0, 10, 0, 5)
+			label.BackgroundTransparency = 1
+			label.Text = text
+			label.TextColor3 = Color3.fromRGB(220, 220, 220)
+			label.Font = Enum.Font.Gotham
+			label.TextSize = 13
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.Parent = slider
+			
+			local valueLabel = Instance.new("TextLabel")
+			valueLabel.Size = UDim2.new(0, 50, 0, 20)
+			valueLabel.Position = UDim2.new(1, -60, 0, 5)
+			valueLabel.BackgroundTransparency = 1
+			valueLabel.Text = tostring(default)
+			valueLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+			valueLabel.Font = Enum.Font.GothamBold
+			valueLabel.TextSize = 12
+			valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+			valueLabel.Parent = slider
+			
+			local track = Instance.new("Frame")
+			track.Size = UDim2.new(1, -20, 0, 4)
+			track.Position = UDim2.new(0, 10, 1, -15)
+			track.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+			track.BorderSizePixel = 0
+			track.Parent = slider
+			
+			local trackCorner = Instance.new("UICorner")
+			trackCorner.CornerRadius = UDim.new(1, 0)
+			trackCorner.Parent = track
+			
+			local fill = Instance.new("Frame")
+			fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+			fill.BackgroundColor3 = Color3.fromRGB(60, 180, 75)
+			fill.BorderSizePixel = 0
+			fill.Parent = track
+			
+			local fillCorner = Instance.new("UICorner")
+			fillCorner.CornerRadius = UDim.new(1, 0)
+			fillCorner.Parent = fill
+			
+			local dragging = false
+			
+			track.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 then
+					dragging = true
+				end
+			end)
+			
+			UserInputService.InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 then
+					dragging = false
+				end
+			end)
+			
+			UserInputService.InputChanged:Connect(function(input)
+				if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+					local pos = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+					local value = math.floor(min + (max - min) * pos)
+					fill.Size = UDim2.new(pos, 0, 1, 0)
+					valueLabel.Text = tostring(value)
+					if callback then callback(value) end
+				end
+			end)
+			
+			return slider
+		end
+		
+		return tab
+	end
+	
+	function window:Destroy()
+		container:Destroy()
+	end
+	
+	return window
 end
 
 return Engine
